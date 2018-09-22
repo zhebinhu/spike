@@ -2,6 +2,7 @@ package com.huzb.splike.controller;
 
 import com.huzb.splike.domain.User;
 import com.huzb.splike.redis.RedisService;
+import com.huzb.splike.redis.UserKey;
 import com.huzb.splike.result.Result;
 import com.huzb.splike.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,10 +42,19 @@ public class DemoController {
  @RequestMapping("/redis/get")
  @ResponseBody
  public Result<User> redisGet(){
-
-  redisService.get(String,Class<T> clazz);
-
+  User user = redisService.get(UserKey.getById,""+1,User.class);
   return Result.success(user);
+
+ }
+
+ @RequestMapping("/redis/set")
+ @ResponseBody
+ public Result<Boolean> redisSet(){
+  User user = new User();
+  user.setId(1);
+  user.setName("1111");
+  redisService.set(UserKey.getById,""+1,user);//UserKey:id1
+  return Result.success(true);
 
  }
 }
