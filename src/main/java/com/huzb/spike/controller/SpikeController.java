@@ -47,6 +47,14 @@ public class SpikeController {
     @Autowired
     SpikeService spikeService;
 
+    /**
+     * 500
+     * 5000*10
+     * @param model
+     * @param user
+     * @param goodsId
+     * @return
+     */
     @RequestMapping("/do_spike")
     public String spike(Model model, User user,
                         @RequestParam("goodsId") long goodsId) {
