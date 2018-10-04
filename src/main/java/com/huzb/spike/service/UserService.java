@@ -27,7 +27,15 @@ public class UserService {
     UserDao userdao;
 
     public User getById(long id) {
-        return userdao.getById(id);
+        User user = redisService.get(UserKey.user, "" + id, User.class);
+        if (user != null) {
+            return user;
+        }
+        user = userdao.getById(id);
+        if (user != null) {
+            redisService.set(UserKey.user, "" + id, user);
+        }
+        return user;
     }
 
 
@@ -65,6 +73,21 @@ public class UserService {
             addCookie(response, user, token);
         }
         return user;
+    }
+
+    public Boolean updatePassword(String token, long id, String password) {
+        User user = userdao.getById(id);
+        if (user == null) {
+            throw new GlobalException(CodeMsg.MOBILE_NOT_EXIST);
+        }
+        User newUser = new User();
+        newUser.setId(id);
+        newUser.setPassword(MD5Util.formPassToDBPass(password, user.getSalt()));
+        userdao.updatePassword(newUser);
+        redisService.delete(UserKey.user, "" + id);
+        user.setPassword(newUser.getPassword());
+        redisService.set(UserKey.token, token, user);
+        return true;
     }
 
     private void addCookie(HttpServletResponse response, User user, String token) {
