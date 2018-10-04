@@ -3,8 +3,10 @@ package com.huzb.spike.controller;
 import com.huzb.spike.domain.User;
 import com.huzb.spike.redis.GoodsKey;
 import com.huzb.spike.redis.RedisService;
+import com.huzb.spike.result.Result;
 import com.huzb.spike.service.GoodsService;
 import com.huzb.spike.service.UserService;
+import com.huzb.spike.vo.GoodsDetailVo;
 import com.huzb.spike.vo.GoodsVo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -74,7 +76,7 @@ public class GoodsController {
         return html;
     }
 
-    @RequestMapping(value = "/to_detail/{goodsId}", produces = "text/html")
+    @RequestMapping(value = "/to_detail2/{goodsId}", produces = "text/html")
     @ResponseBody
     public String toDetail(HttpServletRequest request, HttpServletResponse response, Model model, User user,
                            @PathVariable("goodsId") long goodsId) {
@@ -119,6 +121,33 @@ public class GoodsController {
         }
 
         return html;
+    }
+
+    @RequestMapping(value="/detail/{goodsId}")
+    @ResponseBody
+    public Result<GoodsDetailVo> detail(User user, @PathVariable("goodsId")long goodsId) {
+        GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
+        long startAt = goods.getStartDate().getTime();
+        long endAt = goods.getEndDate().getTime();
+        long now = System.currentTimeMillis();
+        int spikeStatus = 0;
+        int remainSeconds = 0;
+        if(now < startAt ) {//秒杀还没开始，倒计时
+            spikeStatus = 0;
+            remainSeconds = (int)((startAt - now )/1000);
+        }else  if(now > endAt){//秒杀已经结束
+            spikeStatus = 2;
+            remainSeconds = -1;
+        }else {//秒杀进行中
+            spikeStatus = 1;
+            remainSeconds = 0;
+        }
+        GoodsDetailVo vo = new GoodsDetailVo();
+        vo.setGoods(goods);
+        vo.setUser(user);
+        vo.setRemainSeconds(remainSeconds);
+        vo.setSpikeStatus(spikeStatus);
+        return Result.success(vo);
     }
 
 }
