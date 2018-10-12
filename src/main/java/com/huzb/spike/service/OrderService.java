@@ -5,6 +5,8 @@ import com.huzb.spike.dao.OrderDao;
 import com.huzb.spike.domain.OrderInfo;
 import com.huzb.spike.domain.SpikeOrder;
 import com.huzb.spike.domain.User;
+import com.huzb.spike.redis.OrderKey;
+import com.huzb.spike.redis.RedisService;
 import com.huzb.spike.vo.GoodsVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,8 +25,19 @@ public class OrderService {
     @Autowired
     OrderDao orderDao;
 
+    @Autowired
+    RedisService redisService;
+
     public SpikeOrder getSpikeOrderByUserIdGoodsId(Long userid, long goodsId) {
-        return orderDao.getSpikeOrderByUserIdGoodsId(userid, goodsId);
+        SpikeOrder spikeOrder = redisService.get(OrderKey.getSpikeOrderByUidGid, "" + userid + "_" + goodsId, SpikeOrder.class);
+        if (spikeOrder != null) {
+            return spikeOrder;
+        }
+        spikeOrder = orderDao.getSpikeOrderByUserIdGoodsId(userid, goodsId);
+        if (spikeOrder != null) {
+            redisService.set(OrderKey.getSpikeOrderByUidGid, "" + userid + "_" + goodsId, spikeOrder);
+        }
+        return spikeOrder;
     }
 
     @Transactional
@@ -44,6 +57,16 @@ public class OrderService {
         spikeOrder.setUserId(user.getId());
         spikeOrder.setOrderId(orderId);
         orderDao.insertSpikeOrder(spikeOrder);
+        redisService.set(OrderKey.getSpikeOrderByUidGid, "" + user.getId() + "_" + goods.getId(), spikeOrder);
         return orderInfo;
+    }
+
+    public OrderInfo getOrderById(long orderId) {
+        return orderDao.getOrderById(orderId);
+    }
+
+    public void deleteOrders() {
+        orderDao.deleteOrders();
+        orderDao.deleteSpikeOrders();
     }
 }

@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * @author huzb
  * @version v1.0.0
@@ -22,6 +24,10 @@ public class SpikeService {
     @Autowired
     OrderService orderService;
 
+    public void reset(List<GoodsVo> goodsList) {
+        goodsService.resetStock(goodsList);
+        orderService.deleteOrders();
+    }
     @Transactional
     public OrderInfo spike(User user, GoodsVo goods) {
         goodsService.reduceStock(goods);

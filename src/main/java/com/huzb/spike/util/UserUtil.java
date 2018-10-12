@@ -103,6 +103,22 @@ public class UserUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        createUser(5000);
+        int[] a = {5, 3, 4, 2, 1};
+        for (int i = 0, j = 0; i < 4; ++i) {
+            j = i;
+            int ai = a[i + 1];
+            while (ai < a[j]) {
+                a[j + 1] = a[j];
+                if (j-- == 0) {
+                    break;
+                }
+            }
+            a[j + 1] = ai;
+            for (int d : a) {
+                System.out.print(d + " ");
+            }
+            System.out.println();
+        }
     }
+
 }

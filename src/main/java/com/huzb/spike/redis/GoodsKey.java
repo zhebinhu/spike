@@ -15,4 +15,5 @@ public class GoodsKey extends BasePrefix {
 
     public static GoodsKey goodsList = new GoodsKey(TOKEN_EXPIRE, "gl");
     public static GoodsKey goodsDetail = new GoodsKey(TOKEN_EXPIRE, "gd");
+    public static GoodsKey getSpikeGoodsStock = new GoodsKey(TOKEN_EXPIRE,"gs");
 }

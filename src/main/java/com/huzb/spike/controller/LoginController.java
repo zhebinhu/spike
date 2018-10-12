@@ -1,5 +1,6 @@
 package com.huzb.spike.controller;
 
+import com.huzb.spike.rabbitmq.MQSender;
 import com.huzb.spike.redis.RedisService;
 import com.huzb.spike.result.Result;
 import com.huzb.spike.service.UserService;
@@ -31,6 +32,9 @@ public class LoginController {
     @Autowired
     RedisService redisService;
 
+    @Autowired
+    MQSender mqSender;
+
     @RequestMapping("/to_login")
     public String toLogin() {
         return "login";
@@ -42,5 +46,33 @@ public class LoginController {
         //登录
         userService.login(response, loginVo);
         return Result.success(true);
+    }
+
+    @RequestMapping("/mq")
+    @ResponseBody
+    public Result<String> mq() {
+        mqSender.send("hello,uestc");
+        return Result.success("hello,uestc");
+    }
+
+    @RequestMapping("/mq/topic")
+    @ResponseBody
+    public Result<String> topic() {
+        mqSender.sendTopic("hello,uestc1");
+        return Result.success("hello,uestc1");
+    }
+
+    @RequestMapping("/mq/fanout")
+    @ResponseBody
+    public Result<String> fanout() {
+        mqSender.sendFanout("hello,uestc2");
+        return Result.success("hello,uestc2");
+    }
+
+    @RequestMapping("/mq/header")
+    @ResponseBody
+    public Result<String> header() {
+        mqSender.sendHeaders("hello,uestc3");
+        return Result.success("hello,uestc3");
     }
 }
