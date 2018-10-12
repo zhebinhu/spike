@@ -97,34 +97,34 @@ public class SpikeController {
      */
     @RequestMapping("/do_spike")
     @ResponseBody
-    public Result<OrderInfo> spike(Model model, User user,
-                                   @RequestParam("goodsId") long goodsId) {
+    public Result<Integer> spike(Model model, User user,
+                                 @RequestParam("goodsId") long goodsId) {
         model.addAttribute("user", user);
-        if(user == null) {
+        if (user == null) {
             return Result.error(CodeMsg.SESSION_ERROR);
         }
         //内存标记，减少redis访问
         boolean over = localOverMap.get(goodsId);
-        if(over) {
+        if (over) {
             return Result.error(CodeMsg.SPIKE_OVER);
         }
         //预减库存
-        long stock = redisService.decr(GoodsKey.getSpikeGoodsStock, ""+goodsId);//10
-        if(stock < 0) {
+        long stock = redisService.decr(GoodsKey.getSpikeGoodsStock, "" + goodsId);
+        if (stock < 0) {
             localOverMap.put(goodsId, true);
             return Result.error(CodeMsg.SPIKE_OVER);
         }
         //判断是否已经秒杀到了
         SpikeOrder order = orderService.getSpikeOrderByUserIdGoodsId(user.getId(), goodsId);
-        if(order != null) {
+        if (order != null) {
             return Result.error(CodeMsg.REPEATE_SPIKE);
         }
         //入队
         SpikeMessage mm = new SpikeMessage();
         mm.setUser(user);
         mm.setGoodsId(goodsId);
-        sender.sendMiaoshaMessage(mm);
-        return Result.success(0);//排队中
+        sender.sendSpikeMessage(mm);
+        return Result.success(0);
     	/*
     	//判断库存
     	GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);//10个商品，req1 req2
@@ -142,4 +142,22 @@ public class SpikeController {
         return Result.success(orderInfo);
         */
 
+    }
+
+    /**
+     * orderId：成功
+     * -1：秒杀失败
+     * 0： 排队中
+     */
+    @RequestMapping(value = "/result", method = RequestMethod.GET)
+    @ResponseBody
+    public Result<Long> spikeResult(Model model, User user,
+                                    @RequestParam("goodsId") long goodsId) {
+        model.addAttribute("user", user);
+        if (user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        long result = spikeService.getSpikeResult(user.getId(), goodsId);
+        return Result.success(result);
+    }
 }

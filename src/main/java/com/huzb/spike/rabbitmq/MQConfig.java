@@ -31,7 +31,7 @@ public class MQConfig {
      */
     @Bean
     public Queue queue() {
-        return new Queue(QUEUE, true);
+        return new Queue(SPIKE_QUEUE, true);
     }
 
     /**
