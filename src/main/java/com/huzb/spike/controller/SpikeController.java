@@ -1,6 +1,6 @@
 package com.huzb.spike.controller;
 
-import com.huzb.spike.domain.OrderInfo;
+import com.huzb.spike.access.AccessLimit;
 import com.huzb.spike.domain.SpikeOrder;
 import com.huzb.spike.domain.User;
 import com.huzb.spike.rabbitmq.MQSender;
@@ -23,6 +23,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.awt.image.BufferedImage;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 
@@ -73,7 +78,7 @@ public class SpikeController {
 
     @RequestMapping(value = "/reset", method = RequestMethod.GET)
     @ResponseBody
-    public Result<Boolean> reset(Model model) {
+    public Result<Boolean> reset(Model model) throws Exception {
         List<GoodsVo> goodsList = goodsService.listGoodsVo();
         for (GoodsVo goods : goodsList) {
             goods.setStockCount(10);
@@ -83,25 +88,34 @@ public class SpikeController {
         redisService.delete(OrderKey.getSpikeOrderByUidGid);
         redisService.delete(SpikeKey.isGoodsOver);
         spikeService.reset(goodsList);
+        afterPropertiesSet();
         return Result.success(true);
     }
 
     /**
      * 500
      * 5000*10
+     * 1843
      *
      * @param model
      * @param user
      * @param goodsId
      * @return
      */
-    @RequestMapping("/do_spike")
+    @AccessLimit(seconds = 5, maxCount = 5, needLogin = true)
+    @RequestMapping(value = "/{path}/do_spike", method = RequestMethod.POST)
     @ResponseBody
     public Result<Integer> spike(Model model, User user,
-                                 @RequestParam("goodsId") long goodsId) {
+                                 @RequestParam("goodsId") long goodsId,
+                                 @PathVariable("path") String path) {
         model.addAttribute("user", user);
         if (user == null) {
             return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        //验证path
+        boolean check = spikeService.checkPath(user, goodsId, path);
+        if (!check) {
+            return Result.error(CodeMsg.REQUEST_ILLEGAL);
         }
         //内存标记，减少redis访问
         boolean over = localOverMap.get(goodsId);
@@ -149,6 +163,7 @@ public class SpikeController {
      * -1：秒杀失败
      * 0： 排队中
      */
+    @AccessLimit(seconds = 5, maxCount = 5, needLogin = true)
     @RequestMapping(value = "/result", method = RequestMethod.GET)
     @ResponseBody
     public Result<Long> spikeResult(Model model, User user,
@@ -160,4 +175,45 @@ public class SpikeController {
         long result = spikeService.getSpikeResult(user.getId(), goodsId);
         return Result.success(result);
     }
+
+    @AccessLimit(seconds = 5, maxCount = 5, needLogin = true)
+    @RequestMapping(value = "/path", method = RequestMethod.GET)
+    @ResponseBody
+    public Result<String> getSpikePath(HttpServletRequest request, User user,
+                                       @RequestParam("goodsId") long goodsId,
+                                       @RequestParam(value = "verifyCode") int verifyCode
+    ) {
+        if (user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        boolean check = spikeService.checkVerifyCode(user, goodsId, verifyCode);
+        if (!check) {
+            return Result.error(CodeMsg.REQUEST_ILLEGAL);
+        }
+        String path = spikeService.createSpikePath(user, goodsId);
+        return Result.success(path);
+    }
+
+
+    @AccessLimit(seconds = 5, maxCount = 5, needLogin = true)
+    @RequestMapping(value = "/verifyCode", method = RequestMethod.GET)
+    @ResponseBody
+    public Result<String> getSpikeVerifyCode(HttpServletResponse response, User user,
+                                             @RequestParam("goodsId") long goodsId) {
+        if (user == null) {
+            return Result.error(CodeMsg.SESSION_ERROR);
+        }
+        try {
+            BufferedImage image = spikeService.createVerifyCode(user, goodsId);
+            OutputStream out = response.getOutputStream();
+            ImageIO.write(image, "JPEG", out);
+            out.flush();
+            out.close();
+            return null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(CodeMsg.SPIKE_FAIL);
+        }
+    }
+
 }

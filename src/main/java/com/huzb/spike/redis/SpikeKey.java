@@ -6,9 +6,12 @@ package com.huzb.spike.redis;
  * @date 2018/9/22
  */
 public class SpikeKey extends BasePrefix {
-    private SpikeKey(String prefix) {
-        super(prefix);
+
+    private SpikeKey(int expireSeconds, String prefix) {
+        super(expireSeconds, prefix);
     }
 
-    public static SpikeKey isGoodsOver = new SpikeKey("go");
+    public static SpikeKey isGoodsOver = new SpikeKey(0, "go");
+    public static SpikeKey getSpikePath = new SpikeKey(60, "mp");
+    public static SpikeKey getSpikeVerifyCode = new SpikeKey(300, "vc");
 }
